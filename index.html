@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>פנקס ההוצאות</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F6F5C" id="meta-theme-color">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="הוצאות">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper: #F5F3EC;
+    --paper-raised: #FFFFFF;
+    --ink: #24221D;
+    --ink-soft: #6E685D;
+    --line: #E4DFD1;
+    --teal: #1F6F5C;
+    --teal-dark: #164F41;
+    --teal-tint: #E4EFEA;
+    --amber: #C97B3D;
+    --rose: #A3475A;
+    --alert: #B4483A;
+    --alert-tint: #F5E4E0;
+    --shadow: 0 1px 2px rgba(36,34,29,0.06), 0 6px 20px rgba(36,34,29,0.07);
+    --radius: 18px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --card-bg-solid: #FFFFFF;
+    --nav-glass: rgba(255,255,255,0.80);
+    --nav-glass-border: rgba(255,255,255,0.78);
+    --nav-active: rgba(31,111,92,0.12);
+  }
+
+  :root[data-theme="dark"]{
+    --paper: #1B1A17;
+    --paper-raised: #26241D;
+    --ink: #ECE7DA;
+    --ink-soft: #A79F8F;
+    --line: #3A362C;
+    --teal-dark: #6FD1B0;
+    --teal-tint: rgba(63,169,138,0.18);
+    --alert-tint: rgba(180,72,58,0.22);
+    --shadow: 0 1px 2px rgba(0,0,0,0.45), 0 6px 20px rgba(0,0,0,0.35);
+    --card-bg-solid: #26241D;
+    --nav-glass: rgba(38,36,29,0.82);
+    --nav-glass-border: rgba(255,255,255,0.08);
+    --nav-active: rgba(111,209,176,0.14);
+  }
+
+  :root[data-theme="dark"] body{ color-scheme: dark; }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  /*
+    iOS standalone PWA note:
+    With viewport-fit=cover + black-translucent, percentage height on the
+    root can be resolved against WebKit's shortened standalone viewport and
+    leave a status-bar-sized "chin" below the app. Anchor the document to
+    100vh instead, then let the app fill that single root height.
+  */
+  html,body{height:100%; min-height:100%; overflow:hidden; overscroll-behavior:none;}
+  html{ background:var(--paper-raised); }
+  @media (display-mode: standalone){
+    html,body{ height:100vh; min-height:100vh; }
+  }
+  body{
+    margin:0;
+    /* If iOS still exposes a system-owned strip outside the web layer, its
+       sampled under-page color now matches the bottom navigation. */
+    background:var(--paper-raised);
+    color:var(--ink);
+    font-family:'Heebo', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+    transition:background-color .25s ease, color .25s ease;
+  }
+  h1,h2,h3, .display{
+    font-family:'Frank Ruhl Libre', serif;
+  }
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
+
+  .num{ font-variant-numeric: tabular-nums; direction:ltr; unicode-bidi: isolate; }
+
+  #app{ max-width:520px; margin:0 auto; height:100%; min-height:0; position:relative; overflow:hidden; display:flex; flex-direction:column; padding:0; background:var(--paper); }
+
+  /* ---------- Auth screen ---------- */
+  #auth-screen{
+    min-height:100vh;
+    background:var(--paper);
+    display:flex; flex-direction:column; justify-content:center;
+    padding:32px 24px calc(32px + var(--safe-bottom));
+    max-width:420px; margin:0 auto;
+  }
+  .auth-hero{ text-align:center; margin-bottom:36px; }
+  .auth-hero .mark{
+    width:64px; height:64px; border-radius:16px; background:var(--teal);
+    margin:0 auto 18px; display:flex; align-items:center; justify-content:center;
+  }
+  .auth-hero .mark svg{ width:32px; height:32px; }
+  .auth-hero h1{ font-size:28px; margin:0 0 6px; font-weight:700; }
+  .auth-hero p{ color:var(--ink-soft); margin:0; font-size:14.5px; }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px; font-weight:500;}
+  .field input{
+    width:100%; padding:13px 14px; border-radius:12px; border:1.5px solid var(--line);
+    background:var(--paper-raised); font-size:16px; color:var(--ink);
+  }
+  .field input:focus{ outline:none; border-color:var(--teal); }
+
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:14px; border-radius:12px; border:none; cursor:pointer;
+    font-size:16px; font-weight:700; transition:transform .08s ease, opacity .15s ease;
+  }
+  .btn:active{ transform:scale(0.98); }
+  .btn-primary{ background:var(--teal); color:white; }
+  .btn-primary:disabled{ opacity:0.55; }
+  .btn-ghost{ background:transparent; color:var(--teal); }
+  .btn-danger-text{ background:transparent; color:var(--alert); }
+
+  .auth-switch{ text-align:center; margin-top:16px; font-size:14px; color:var(--ink-soft); }
+  .auth-switch a{ color:var(--teal); font-weight:700; cursor:pointer; text-decoration:none; }
+
+  .auth-error{
+    background:var(--alert-tint); color:var(--alert); border-radius:10px; padding:10px 12px;
+    font-size:13.5px; margin-bottom:14px; display:none;
+  }
+
+  .hidden{ display:none !important; }
+
+  /* ---------- Header ---------- */
+  header{
+    padding:calc(18px + var(--safe-top)) 20px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  header .title{ display:flex; align-items:center; gap:10px; }
+  header .title .mark{ width:34px; height:34px; border-radius:10px; background:var(--teal); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  header .title .mark svg{ width:18px; height:18px; }
+  header h1{ font-size:19px; margin:0; font-weight:700; }
+  .sync-dot{ width:8px; height:8px; border-radius:50%; background:#B8C9A9; display:inline-block; margin-inline-start:6px; transition:background .3s; }
+  .sync-dot.on{ background:var(--teal); }
+  .sync-dot.busy{ background:var(--amber); }
+  .icon-btn{
+    width:36px; height:36px; border-radius:50%; border:none; background:var(--paper-raised);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--shadow);
+    color:var(--ink-soft);
+  }
+  .icon-btn svg{ width:18px; height:18px; }
+
+  /* ---------- Month nav ---------- */
+  .month-nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px 14px;
+  }
+  .month-nav .m-btn{
+    width:38px; height:38px; border-radius:50%; border:none; background:var(--paper-raised);
+    box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--teal-dark);
+  }
+  .month-nav .m-btn svg{ width:18px; height:18px; }
+  .month-label{ text-align:center; }
+  .month-label .m-name{ font-size:19px; font-weight:700; font-family:'Frank Ruhl Libre', serif; }
+  .month-label .m-today{ font-size:12px; color:var(--teal); cursor:pointer; font-weight:600; }
+
+  /* ---------- Receipt hero card ---------- */
+  .receipt{
+    margin:0 20px 18px;
+    background:var(--paper-raised);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+    padding:22px 22px 20px;
+  }
+  .receipt::before{
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:10px;
+    background-image: radial-gradient(circle at 10px 0, transparent 6px, var(--paper) 6.5px);
+    background-size:20px 10px;
+    background-repeat:repeat-x;
+  }
+  .receipt .r-label{ font-size:12.5px; color:var(--ink-soft); font-weight:600; letter-spacing:0.3px; }
+  .receipt .r-total{ font-size:40px; font-weight:800; font-family:'Frank Ruhl Libre', serif; margin:2px 0 14px; display:flex; align-items:baseline; gap:6px;}
+  .receipt .r-total .cur{ font-size:22px; font-weight:700; color:var(--ink-soft); }
+  .receipt .r-bar-track{ height:8px; border-radius:6px; background:var(--teal-tint); overflow:hidden; }
+  .receipt .r-bar-fill{ height:100%; background:var(--teal); border-radius:6px; transition:width .4s ease; }
+  .receipt .r-bar-fill.over{ background:var(--alert); }
+  .receipt .r-meta{ display:flex; justify-content:space-between; margin-top:9px; font-size:13px; color:var(--ink-soft); }
+  .receipt .r-meta b{ color:var(--ink); font-weight:700; }
+  .receipt .r-meta.alert b{ color: var(--alert); }
+  .receipt-dashed{
+    border-top:1.5px dashed var(--line); margin-top:16px; padding-top:14px;
+    display:flex; justify-content:space-between; gap:10px;
+  }
+  .receipt-stat{ text-align:center; flex:1; }
+  .receipt-stat .v{ font-size:17px; font-weight:700; }
+  .receipt-stat .l{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+
+  /* ---------- Cards ---------- */
+  .card{ background:var(--paper-raised); border-radius:var(--radius); box-shadow:var(--shadow); }
+
+  /* Category rows */
+  .cat-row{ display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .cat-row:last-child{ border-bottom:none; }
+  .cat-dot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+  .cat-info{ flex:1; min-width:0; }
+  .cat-row .cat-top{ display:flex; justify-content:space-between; font-size:14.5px; margin-bottom:6px; }
+  .cat-row .cat-name{ font-weight:600; }
+  .cat-row .cat-amounts{ color:var(--ink-soft); }
+  .cat-row .cat-amounts b{ color:var(--ink); font-weight:700; }
+  .cat-track{ height:6px; border-radius:4px; background:var(--line); overflow:hidden; }
+  .cat-fill{ height:100%; border-radius:4px; }
+  .empty-hint{ padding:20px 16px; text-align:center; color:var(--ink-soft); font-size:13.5px; }
+
+  /* Charts */
+  .chart-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+  .chart-tab{
+    flex:1; text-align:center; padding:9px; border-radius:10px; font-size:13px; font-weight:600;
+    background:var(--paper-raised); color:var(--ink-soft); cursor:pointer; box-shadow:var(--shadow);
+  }
+  .chart-tab.active{ background:var(--teal); color:white; box-shadow:none; }
+  .chart-card{ padding:16px; }
+  .chart-legend{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:12px; justify-content:center; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); }
+  .legend-dot{ width:9px; height:9px; border-radius:50%; }
+
+  /* Expense list */
+  .exp-day-label{ font-size:12px; color:var(--ink-soft); font-weight:700; padding:12px 16px 4px; }
+  .exp-row{ display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .exp-row:last-child{ border-bottom:none; }
+  .exp-dot{ width:34px; height:34px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:white; font-size:14px; font-weight:700; }
+  .exp-mid{ flex:1; min-width:0; }
+  .exp-cat{ font-size:14.5px; font-weight:600; }
+  .exp-note{ font-size:12.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .exp-meta-row{ display:flex; align-items:center; gap:6px; margin-top:2px; }
+  .pay-tag{ font-size:10.5px; padding:2px 7px; border-radius:7px; font-weight:700; flex-shrink:0; }
+  .pay-tag.cash{ background:#F3E7DA; color:#8B5E3C; }
+  .pay-tag.credit{ background:#E4EEF5; color:#355C73; }
+  .exp-amount{ font-weight:700; font-size:15px; flex-shrink:0; }
+  .exp-del{ width:28px; height:28px; border-radius:50%; border:none; background:transparent; color:var(--ink-soft); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .exp-del svg{ width:15px; height:15px; }
+
+  /* Modal */
+  .modal-backdrop{
+    position:fixed;
+    left:0; right:0; top:var(--modal-vv-top, 0px);
+    height:var(--modal-vv-height, 100dvh);
+    background:rgba(36,34,29,0.45); z-index:50;
+    display:flex; align-items:flex-end; justify-content:center;
+    overflow:hidden;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .modal-backdrop.open{ opacity:1; pointer-events:auto; }
+  .modal{
+    background:var(--paper); width:100%; max-width:520px; border-radius:22px 22px 0 0;
+    padding:10px 20px 18px;
+    max-height:calc(var(--modal-vv-height, 100dvh) - 8px);
+    overflow-x:hidden; overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    transform:translateY(16px); transition:transform .25s ease;
+  }
+  .modal-backdrop.open .modal{ transform:translateY(0); }
+  .modal-handle{ width:38px; height:4px; background:var(--line); border-radius:3px; margin:6px auto 14px; }
+  .modal h3{ font-size:18px; margin:0 0 16px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip{
+    padding:9px 14px; border-radius:20px; background:var(--paper-raised); border:1.5px solid var(--line);
+    font-size:13.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  .chip.active{ border-color:var(--teal); background:var(--teal-tint); color:var(--teal-dark); }
+  .chip.add-chip{ color:var(--teal); border-style:dashed; }
+
+  textarea{ resize:none; }
+
+  .top-amount-input{
+    width:100%; border:none; background:transparent; font-size:44px; font-weight:800;
+    font-family:'Frank Ruhl Libre', serif; text-align:center; color:var(--ink); padding:8px 0 4px;
+    direction:ltr;
+  }
+  .top-amount-input:focus{ outline:none; }
+  .top-amount-wrap{ display:flex; align-items:baseline; justify-content:center; gap:4px; margin-bottom:6px; }
+  .top-amount-wrap .cur-sym{ font-size:22px; color:var(--ink-soft); font-weight:700; }
+
+  .toast{
+    position:fixed; bottom:calc(24px + var(--safe-bottom)); left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--ink); color:white; padding:12px 20px; border-radius:12px; font-size:13.5px;
+    z-index:60; opacity:0; transition:all .25s ease; max-width:calc(100% - 40px); text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar{ display:none; }
+
+  /* ---------- Native app shell ---------- */
+  .app-header{
+    flex:0 0 auto;
+    padding:calc(12px + var(--safe-top)) 18px 8px;
+  }
+  .app-header header{
+    padding:0;
+  }
+  .app-header .month-nav{
+    padding:10px 0 0;
+  }
+  .app-header header .title .mark{
+    width:32px; height:32px; border-radius:9px;
+  }
+  .app-header header h1{ font-size:18px; }
+  .app-header .icon-btn{ width:34px; height:34px; }
+  .app-header .month-nav .m-btn{ width:34px; height:34px; }
+  .app-header .month-label .m-name{ font-size:17px; }
+
+  .app-pages{
+    flex:1 1 auto;
+    min-height:0;
+    position:relative;
+    overflow:hidden;
+  }
+  .app-page{
+    position:absolute;
+    inset:0;
+    display:none;
+    min-height:0;
+    overflow:hidden;
+    padding:2px 18px 12px;
+  }
+  .app-page.active{
+    display:flex;
+    flex-direction:column;
+    animation:pageIn .18s ease-out;
+  }
+  @keyframes pageIn{
+    from{ opacity:.45; transform:translateY(3px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  .page-heading{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin:0 2px 10px;
+  }
+  .page-heading h2{
+    margin:0;
+    font-size:18px;
+    font-weight:700;
+  }
+  .page-heading .page-subtitle{
+    margin-top:2px;
+    color:var(--ink-soft);
+    font-size:11.5px;
+  }
+  .page-heading .action{
+    flex:0 0 auto;
+    color:var(--teal);
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+    padding:7px 9px;
+    border-radius:10px;
+    background:var(--teal-tint);
+  }
+  .page-heading .action svg{ width:14px; height:14px; }
+
+  .home-page{ justify-content:flex-start; }
+  .home-page .receipt{
+    margin:0;
+    padding:20px 20px 18px;
+  }
+  .home-page .receipt .r-total{ font-size:38px; margin-bottom:12px; }
+  .home-page .receipt-dashed{ margin-top:14px; padding-top:12px; }
+  .page-scroll{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:none;
+    padding-bottom:4px;
+  }
+  .page-scroll::-webkit-scrollbar{ display:none; }
+  #page-categories .card,
+  #page-expenses .card{
+    box-shadow:var(--shadow);
+  }
+  #page-categories .cat-row{ padding:11px 14px; }
+  #page-categories .cat-row .cat-top{ margin-bottom:5px; font-size:14px; }
+  #page-categories .cat-track{ height:5px; }
+
+  #page-insights .chart-tabs{
+    flex:0 0 auto;
+    margin-bottom:10px;
+  }
+  #page-insights .chart-tab{ padding:8px 6px; font-size:12px; }
+  #page-insights .chart-card{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:14px;
+    overflow:hidden;
+  }
+  #page-insights .chart-card canvas{
+    width:100% !important;
+    max-height:min(42dvh, 300px) !important;
+  }
+  #page-insights .chart-legend{
+    flex:0 0 auto;
+    margin-top:10px;
+    gap:6px 12px;
+    max-height:86px;
+    overflow-y:auto;
+  }
+
+  #page-expenses .exp-day-label{ padding:10px 14px 3px; }
+  #page-expenses .exp-row{ padding:10px 14px; gap:10px; }
+  #page-expenses .exp-dot{ width:31px; height:31px; border-radius:9px; }
+  #page-expenses .exp-cat{ font-size:14px; }
+  #page-expenses .exp-amount{ font-size:14px; }
+
+  /* StudyFlow-style floating navigation: the shell height remains part of the
+     normal app layout so the iOS bottom-gap fix is left completely intact. */
+  .bottom-nav{
+    flex:0 0 96px;
+    height:96px;
+    padding:9px 20px 13px;
+    background:transparent;
+    border:0;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    align-items:center;
+    gap:2px;
+    position:relative;
+    overflow:visible;
+    isolation:isolate;
+    z-index:25;
+  }
+  .bottom-nav::before{
+    content:"";
+    position:absolute;
+    inset:6px 12px 8px;
+    border:1px solid color-mix(in srgb, var(--line) 72%, transparent);
+    border-radius:34px;
+    background:var(--nav-glass);
+    box-shadow:0 12px 34px rgba(36,34,29,0.13), 0 2px 8px rgba(36,34,29,0.06);
+    backdrop-filter:blur(24px) saturate(1.25);
+    -webkit-backdrop-filter:blur(24px) saturate(1.25);
+    z-index:0;
+    pointer-events:none;
+  }
+  .nav-active-pill{
+    position:absolute;
+    top:13px;
+    left:0;
+    width:0;
+    height:62px;
+    border-radius:31px;
+    border:1px solid color-mix(in srgb, var(--teal) 18%, var(--line));
+    background:color-mix(in srgb, var(--teal-tint) 62%, var(--paper-raised));
+    box-shadow:0 2px 8px rgba(36,34,29,0.04), inset 0 0 0 1px rgba(255,255,255,0.28);
+    opacity:0;
+    transform:translate3d(0,0,0);
+    transition:
+      transform .38s cubic-bezier(.22,1,.36,1),
+      width .38s cubic-bezier(.22,1,.36,1),
+      opacity .16s ease;
+    z-index:1;
+    pointer-events:none;
+    will-change:transform,width;
+  }
+  .bottom-nav.nav-ready .nav-active-pill{ opacity:1; }
+  .nav-active-pill.no-animate{ transition:none !important; }
+  .nav-btn{
+    min-width:0;
+    padding:0 4px;
+    border:0;
+    background:transparent;
+    color:var(--ink-soft);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    height:62px;
+    border-radius:31px;
+    font-size:10.5px;
+    font-weight:700;
+    cursor:pointer;
+    position:relative;
+    z-index:2;
+    transition:color .24s ease, transform .24s cubic-bezier(.22,1,.36,1);
+  }
+  .nav-btn svg{
+    width:22px;
+    height:22px;
+    flex:none;
+    transition:transform .32s cubic-bezier(.22,1,.36,1), opacity .24s ease;
+  }
+  .nav-btn span{ transition:font-weight .22s ease, opacity .22s ease; }
+  .nav-btn.active{ color:var(--teal); }
+  .nav-btn.active span{ font-weight:800; color:var(--ink); }
+  .nav-btn.active svg{ transform:translateY(-1px) scale(1.06); }
+  .nav-btn:active{ transform:scale(.96); }
+
+  /* Center action lives inside the navigation capsule as the true middle slot.
+     It shares the same grid alignment as the four tabs, while the glyph is
+     geometrically centered inside its button. */
+  .nav-add{
+    position:relative;
+    justify-self:center;
+    align-self:center;
+    width:58px;
+    height:58px;
+    padding:0;
+    margin:0;
+    line-height:0;
+    -webkit-appearance:none;
+    appearance:none;
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,.22);
+    background:var(--teal);
+    color:white;
+    display:grid;
+    place-items:center;
+    box-shadow:0 8px 20px rgba(31,111,92,.26);
+    cursor:pointer;
+    z-index:3;
+    transition:transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s ease;
+  }
+  .nav-add:active{ transform:scale(.94); box-shadow:0 4px 12px rgba(31,111,92,.22); }
+  .nav-add svg{
+    width:28px;
+    height:28px;
+    display:block;
+    flex:none;
+  }
+
+  @media (max-height:700px){
+    .app-header{ padding-top:calc(8px + var(--safe-top)); padding-bottom:5px; }
+    .app-header .month-nav{ padding-top:7px; }
+    .home-page .receipt{ padding:16px 18px 15px; }
+    .home-page .receipt .r-total{ font-size:34px; margin:0 0 9px; }
+    .home-page .receipt-dashed{ margin-top:10px; padding-top:9px; }
+    .bottom-nav{ flex-basis:88px; height:88px; padding:7px 18px 11px; }
+    .bottom-nav::before{ inset:5px 10px 7px; border-radius:33px; }
+    .nav-active-pill{ top:11px; height:56px; border-radius:28px; }
+    .nav-btn{ height:56px; border-radius:28px; }
+    .nav-add{ width:54px; height:54px; border-radius:18px; }
+    .nav-add svg{ width:26px; height:26px; }
+  }
+
+  @media (min-width:700px){
+    body{ display:flex; justify-content:center; }
+    #app{
+      width:520px;
+      height:min(900px, 100dvh);
+      margin:auto;
+      border-inline:1px solid var(--line);
+      background:var(--paper);
+      box-shadow:0 20px 70px rgba(36,34,29,.12);
+    }
+  }
+
+  /* ---------- Boot loader ---------- */
+  #boot-loader{
+    position:fixed; inset:0; background:var(--paper); z-index:200;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    transition:opacity .35s ease, visibility .35s ease;
+  }
+  #boot-loader.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+  #boot-loader .mark{
+    width:56px; height:56px; border-radius:16px; background:var(--teal);
+    display:flex; align-items:center; justify-content:center;
+    animation:pulseFade 1.4s ease-in-out infinite;
+  }
+  #boot-loader .mark svg{ width:28px; height:28px; }
+  #boot-loader .boot-text{ font-size:13px; color:var(--ink-soft); font-weight:600; letter-spacing:0.2px; }
+
+  @keyframes pulseFade{ 0%,100%{ opacity:.45; transform:scale(0.96); } 50%{ opacity:1; transform:scale(1); } }
+</style>
+</head>
+<body>
+
+<div id="boot-loader">
+  <div class="mark">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12a1 1 0 0 1 1 1v16l-2.5-1.5L14 20l-2-1.5L10 20l-2.5-1.5L5 20V4a1 1 0 0 1 1-1Z" stroke="white" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+  </div>
+  <div class="boot-text">טוען...</div>
+</div>
+
+<div id="auth-screen">
+  <div class="auth-hero">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12a1 1 0 0 1 1 1v16l-2.5-1.5L14 20l-2-1.5L10 20l-2.5-1.5L5 20V4a1 1 0 0 1 1-1Z" stroke="white" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </div>
+    <h1>פנקס ההוצאות</h1>
+    <p id="auth-subtitle">התחברו כדי לנהל ולסנכרן את ההוצאות שלכם בכל המכשירים</p>
+  </div>
+
+  <div class="auth-error" id="auth-error"></div>
+
+  <form id="auth-form">
+    <div class="field">
+      <label>אימייל</label>
+      <input type="email" id="auth-email" autocomplete="email" required>
+    </div>
+    <div class="field">
+      <label>סיסמה</label>
+      <input type="password" id="auth-password" autocomplete="current-password" required minlength="6">
+    </div>
+    <button type="submit" class="btn btn-primary" id="auth-submit">התחברות</button>
+  </form>
+
+  <div class="auth-switch">
+    <span id="auth-switch-text">אין לכם חשבון עדיין?</span>
+    <a id="auth-switch-link">להרשמה</a>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+
+  <div class="app-header">
+  <header>
+    <div class="title">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12a1 1 0 0 1 1 1v16l-2.5-1.5L14 20l-2-1.5L10 20l-2.5-1.5L5 20V4a1 1 0 0 1 1-1Z" stroke="white" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <h1>פנקס ההוצאות</h1>
+      </div>
+      <span class="sync-dot" id="sync-dot" title="סטטוס סנכרון"></span>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="icon-btn" id="theme-toggle-btn" title="החלפת מצב תצוגה">
+        <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" style="display:none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        <svg id="theme-icon-system" viewBox="0 0 24 24" fill="none" style="display:none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17V3.5Z" fill="currentColor"/></svg>
+      </button>
+      <button class="icon-btn" id="export-btn" title="ייצוא לאקסל">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="logout-btn" title="התנתקות">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M15 17l5-5-5-5M20 12H9M12 19H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="month-nav">
+    <button class="m-btn" id="next-month">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="month-label">
+      <div class="m-name" id="month-name">—</div>
+      <div class="m-today" id="goto-today">חזרה להיום</div>
+    </div>
+    <button class="m-btn" id="prev-month">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  </div>
+
+  <main class="app-pages">
+    <section class="app-page home-page active" id="page-home" data-page="home">
+  <div class="receipt">
+    <div class="r-label">סה"כ הוצאות החודש</div>
+    <div class="r-total"><span class="num" id="total-spent">0</span><span class="cur">₪</span></div>
+    <div class="r-bar-track"><div class="r-bar-fill" id="total-bar" style="width:0%"></div></div>
+    <div class="r-meta" id="total-meta"><span>מתוך תקציב <b class="num" id="total-budget">0</b> ₪</span><span id="total-remaining-wrap">נותרו <b class="num" id="total-remaining">0</b> ₪</span></div>
+    <div class="receipt-dashed">
+      <div class="receipt-stat"><div class="v num" id="stat-count">0</div><div class="l">הוצאות</div></div>
+      <div class="receipt-stat"><div class="v num" id="stat-avg">0</div><div class="l">ממוצע יומי</div></div>
+      <div class="receipt-stat"><div class="v num" id="stat-top">—</div><div class="l">קטגוריה מובילה</div></div>
+    </div>
+  </div>
+    </section>
+
+    <section class="app-page" id="page-categories" data-page="categories">
+      <div class="page-heading">
+        <div><h2>קטגוריות ותקציב</h2><div class="page-subtitle">ניהול התקציב החודשי לפי קטגוריה</div></div>
+      <span class="action" id="add-cat-btn">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        חדשה
+      </span>
+      </div>
+      <div class="page-scroll"><div class="card" id="category-list"></div></div>
+    </section>
+
+    <section class="app-page" id="page-insights" data-page="insights">
+      <div class="page-heading"><div><h2>תובנות</h2><div class="page-subtitle">פילוח והתקדמות מול התקציב</div></div></div>
+    <div class="chart-tabs">
+      <div class="chart-tab active" data-chart="pie">פילוח הוצאות</div>
+      <div class="chart-tab" data-chart="bar">תקציב מול בפועל</div>
+      <div class="chart-tab" data-chart="payment">מזומן / אשראי</div>
+    </div>
+    <div class="card chart-card" id="chart-card">
+      <canvas id="chart-canvas" height="220"></canvas>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+    </section>
+
+    <section class="app-page" id="page-expenses" data-page="expenses">
+      <div class="page-heading"><div><h2>הוצאות</h2><div class="page-subtitle">כל ההוצאות של החודש הנבחר</div></div></div>
+      <div class="page-scroll"><div class="card" id="expense-list"></div></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="ניווט ראשי">
+    <span class="nav-active-pill" aria-hidden="true"></span>
+    <button class="nav-btn active" data-page-target="home" aria-label="ראשי">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>ראשי</span>
+    </button>
+    <button class="nav-btn" data-page-target="categories" aria-label="קטגוריות">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h14M5 18h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="6" r="1.6" fill="currentColor"/><circle cx="14" cy="12" r="1.6" fill="currentColor"/><circle cx="10" cy="18" r="1.6" fill="currentColor"/></svg><span>קטגוריות</span>
+    </button>
+    <button class="nav-add" id="nav-add-expense" aria-label="הוספת הוצאה">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+    </button>
+    <button class="nav-btn" data-page-target="insights" aria-label="תובנות">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 19V9m7 10V5m7 14v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 20.5h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>תובנות</span>
+    </button>
+    <button class="nav-btn" data-page-target="expenses" aria-label="הוצאות">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12a1 1 0 0 1 1 1v16l-2.5-1.5L14 20l-2-1.5L10 20l-2.5-1.5L5 20V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>הוצאות</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Add expense modal -->
+<div class="modal-backdrop" id="expense-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>הוצאה חדשה</h3>
+    <div class="top-amount-wrap">
+      <span class="cur-sym">₪</span>
+      <input type="number" inputmode="decimal" class="top-amount-input" id="exp-amount" placeholder="0" min="0" step="0.1">
+    </div>
+    <div class="field">
+      <label>קטגוריה</label>
+      <div class="chip-row" id="exp-cat-chips"></div>
+    </div>
+    <div class="field">
+      <label>אמצעי תשלום</label>
+      <div class="chip-row" id="exp-payment-chips"></div>
+    </div>
+    <div class="field">
+      <label>תאריך</label>
+      <input type="date" id="exp-date">
+    </div>
+    <div class="field">
+      <label>הערה (לא חובה)</label>
+      <input type="text" id="exp-note" placeholder="לדוגמה: קניות בסופר" maxlength="80">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="exp-cancel" style="flex:1">ביטול</button>
+      <button class="btn btn-primary" id="exp-save" style="flex:2">שמירת הוצאה</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add category modal -->
+<div class="modal-backdrop" id="cat-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="cat-modal-title">קטגוריה חדשה</h3>
+    <div class="field">
+      <label>שם הקטגוריה</label>
+      <input type="text" id="cat-name" maxlength="20" placeholder="לדוגמה: חינוך">
+    </div>
+    <div class="field">
+      <label>תקציב חודשי (₪, לא חובה)</label>
+      <input type="number" inputmode="decimal" id="cat-budget" placeholder="0" min="0" step="1">
+    </div>
+    <div class="field">
+      <label>צבע</label>
+      <div class="chip-row" id="cat-color-chips"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger-text hidden" id="cat-delete" style="flex:1">מחיקה</button>
+      <button class="btn btn-ghost" id="cat-cancel" style="flex:1">ביטול</button>
+      <button class="btn btn-primary" id="cat-save" style="flex:2">שמירה</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase (compat SDK, simple <script> usage, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="vendor-xlsx.js"></script>
+<script src="vendor-chartjs.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js?v=38"></script>
+</body>
+</html>

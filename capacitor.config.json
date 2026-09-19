@@ -1,0 +1,11 @@
+{
+  "appId": "com.es419.expenses",
+  "appName": "פנקס ההוצאות",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
