@@ -44,16 +44,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y imagemagick
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
-          for spec in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-            density="${spec%%:*}"
-            size="${spec##*:}"
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             dir="android/app/src/main/res/mipmap-${density}"
             mkdir -p "$dir"
-            convert icon-512.png -resize "${size}x${size}" "$dir/ic_launcher.png"
-            cp "$dir/ic_launcher.png" "$dir/ic_launcher_round.png"
+            cp icon-192.png "$dir/ic_launcher.png"
+            cp icon-192.png "$dir/ic_launcher_round.png"
           done
 
       - name: Build debug APK
