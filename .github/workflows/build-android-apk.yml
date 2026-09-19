@@ -29,6 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Prepare Android web bundle
+        run: |
+          mkdir -p www
+          cp index.html app.js firebase-config.js vendor-chartjs.js vendor-xlsx.js manifest.json icon-192.png icon-512.png apple-touch-icon.png www/
+
       - name: Create Android project
         run: npx cap add android
 
